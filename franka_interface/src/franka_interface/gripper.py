@@ -297,7 +297,7 @@ class GripperInterface(object):
         :rtype: bool
         """
         self._caller = "open gripper"
-        return self.move_joints(0.2)
+        return self.move_joints(width=0.2, speed=0.1)
 
     def close(self):
         """
