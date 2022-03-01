@@ -1,16 +1,16 @@
 # /***************************************************************************
 
-# 
+#
 # @package: franka_interface
 # @metapackage: franka_ros_interface
 # @author: Saif Sidhik <sxs1412@bham.ac.uk>
-# 
+#
 
 # **************************************************************************/
 
 # /***************************************************************************
 # Copyright (c) 2019-2021, Saif Sidhik
- 
+
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,7 +25,7 @@
 # **************************************************************************/
 
 """
-:info: 
+:info:
    Inteface Class for Franka gripper.
 
 """
@@ -37,8 +37,8 @@ import franka_dataflow
 from copy import deepcopy
 from sensor_msgs.msg import JointState
 
-from franka_gripper.msg import ( GraspAction, GraspGoal, 
-                                 HomingAction, HomingGoal,   
+from franka_gripper.msg import ( GraspAction, GraspGoal,
+                                 HomingAction, HomingGoal,
                                  MoveAction, MoveGoal,
                                  StopAction, StopGoal,
                                  GraspEpsilon )
@@ -62,7 +62,7 @@ class GripperInterface(object):
         """
         Constructor.
         """
-        
+
         self.name = '/franka_gripper'
 
         ns = self.name +'/'
@@ -135,13 +135,13 @@ class GripperInterface(object):
     def set_velocity(self, value):
         """
         Set default value for gripper joint motions. Used for move and grasp commands.
-       
+
         :param value: speed value [m/s]
         :type value: float
-       
+
         """
         assert self.MIN_WIDTH <= value <= self.MAX_WIDTH, "GripperInterface: Invalid speed request for gripper joints. Should be within {} and {}.".format(self.MIN_WIDTH, self.MAX_WIDTH)
-        self._gripper_speed = value        
+        self._gripper_speed = value
 
 
     def _joint_states_callback(self, msg):
@@ -265,17 +265,17 @@ class GripperInterface(object):
     def home_joints(self, wait_for_result = False):
         """
         Performs homing of the gripper.
-       
+
         After changing the gripper fingers, a homing needs to be done.
         This is needed to estimate the maximum grasping width.
 
-        :param wait_for_result: if True, this method will block till response is 
+        :param wait_for_result: if True, this method will block till response is
          recieved from server
         :type wait_for_result: bool
-       
+
         :return: success
-        :rtype: bool      
-        
+        :rtype: bool
+
         """
         self._caller = "home_joints"
 
@@ -284,7 +284,7 @@ class GripperInterface(object):
         self._homing_action_client.send_goal(goal, done_cb =self._done_cb, active_cb = self._active_cb, feedback_cb = self._feedback_cb)
 
         if wait_for_result:
-            result = self._homing_action_client.wait_for_result(rospy.Duration(15.))
+            result = self._homing_action_client.wait_for_result(rospy.Duration(2.))
             return result
 
         return True
@@ -307,11 +307,11 @@ class GripperInterface(object):
             the gripper when it is already closed. Use :py:meth:`close` with
             argument 0 (zero) if you want to close it, or use :py:meth:`grasp`
             wherever possible.
-        
-        .. note:: This is not exactly doing what it should. The behaviour is 
+
+        .. note:: This is not exactly doing what it should. The behaviour is
             faked by catching the error thrown when trying to grasp a very small
             object with a very small force. Since the gripper will actually hit the
-            object before it reaches the commanded width, we catch the feedback 
+            object before it reaches the commanded width, we catch the feedback
             and send the gripper stop command to stop it where it is.
 
         :return: True if command was successful, False otherwise.
@@ -329,16 +329,16 @@ class GripperInterface(object):
     def move_joints(self, width, speed = None, wait_for_result = True):
         """
         Moves the gripper fingers to a specified width.
-       
+
         :param width: Intended opening width. [m]
         :param speed: Closing speed. [m/s]
-        :param wait_for_result: if True, this method will block till response is 
+        :param wait_for_result: if True, this method will block till response is
                                     recieved from server
 
         :type width: float
         :type speed: float
         :type wait_for_result: bool
-       
+
         :return: True if command was successful, False otherwise.
         :rtype: bool
         """
@@ -353,7 +353,7 @@ class GripperInterface(object):
         self._move_action_client.send_goal(goal, done_cb =self._done_cb, active_cb = self._active_cb, feedback_cb = self._feedback_cb)
 
         if wait_for_result:
-            result = self._move_action_client.wait_for_result(rospy.Duration(15.))
+            result = self._move_action_client.wait_for_result(rospy.Duration(2.))
             return result
 
         return True
@@ -362,7 +362,7 @@ class GripperInterface(object):
     def stop_action(self):
         """
         Stops a currently running gripper move or grasp.
-       
+
         :return: True if command was successful, False otherwise.
         :rtype: bool
         """
@@ -372,16 +372,16 @@ class GripperInterface(object):
 
         self._stop_action_client.send_goal(goal, done_cb =self._done_cb, active_cb = self._active_cb, feedback_cb = self._feedback_cb)
 
-        result = self._stop_action_client.wait_for_result(rospy.Duration(15.))
+        result = self._stop_action_client.wait_for_result(rospy.Duration(2.))
         return result
 
     def grasp(self, width, force, speed = None, epsilon_inner = 0.005, epsilon_outer = 0.005,wait_for_result = True, cb = None):
         """
         Grasps an object.
-       
+
         An object is considered grasped if the distance :math:`d` between the gripper fingers satisfies
         :math:`(width - epsilon\_inner) < d < (width + epsilon\_outer)`.
-       
+
         :param width: Size of the object to grasp. [m]
         :param speed: Closing speed. [m/s]
         :param force: Grasping force. [N]
@@ -417,7 +417,7 @@ class GripperInterface(object):
         self._grasp_action_client.send_goal(goal, done_cb = cb, active_cb = self._active_cb, feedback_cb = self._feedback_cb)
 
         if wait_for_result:
-            result = self._grasp_action_client.wait_for_result(rospy.Duration(15.))
+            result = self._grasp_action_client.wait_for_result(rospy.Duration(2.))
             return result
 
         return True
