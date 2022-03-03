@@ -800,6 +800,7 @@ class ArmInterface(object):
                 [positions[n] for n in self._joint_names], tolerance=threshold)
             if not success:
                 return False
+            return True
         else:
             if use_moveit:
                 rospy.logwarn("{}: MoveGroupInterface was not found! Using JointTrajectoryActionClient instead.".format(
