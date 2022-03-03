@@ -786,7 +786,79 @@ class ArmInterface(object):
 
         rospy.loginfo("{}: Trajectory controlling complete".format(
             self.__class__.__name__))
-    
+
+    def move_to_joint_positions_check(self, positions, timeout=10.0,
+                                      threshold=0.00085,
+                                      test=None, use_moveit=True):
+        """move_to_joint_positions with checking success"""
+
+        curr_controller = self._ctrl_manager.set_motion_controller(
+            self._ctrl_manager.joint_trajectory_controller)
+
+        if use_moveit and self._movegroup_interface:
+            success = self._movegroup_interface.go_to_joint_positions(
+                [positions[n] for n in self._joint_names], tolerance=threshold)
+            if not success:
+                return False
+        else:
+            if use_moveit:
+                rospy.logwarn("{}: MoveGroupInterface was not found! Using JointTrajectoryActionClient instead.".format(
+                    self.__class__.__name__))
+            min_traj_dur = 0.5
+            traj_client = JointTrajectoryActionClient(
+                joint_names=self.joint_names())
+            traj_client.clear()
+
+            dur = []
+            for j in range(len(self._joint_names)):
+                dur.append(max(abs(positions[self._joint_names[j]] - self._joint_angle[self._joint_names[j]]
+                                   ) / self._joint_limits.velocity[j], min_traj_dur))
+
+            traj_client.add_point(
+                positions=[self._joint_angle[n] for n in self._joint_names], time=0.0001)
+            traj_client.add_point(positions=[
+                                  positions[n] for n in self._joint_names], time=max(dur)/self._speed_ratio)
+
+            def genf(joint, angle):
+                def joint_diff():
+                    return abs(angle - self._joint_angle[joint])
+                return joint_diff
+
+            diffs = [genf(j, a) for j, a in list(iteritems(positions)) if
+                     j in self._joint_angle]
+
+            fail_msg = "{}: {} limb failed to reach commanded joint positions.".format(
+                self.__class__.__name__, self.name.capitalize())
+
+            def test_collision():
+                if self.has_collided():
+                    rospy.logerr(' '.join(["Collision detected.", fail_msg]))
+                    return True
+                return False
+
+            traj_client.start()  # send the trajectory action request
+            # traj_client.wait(timeout = timeout)
+
+            franka_dataflow.wait_for(
+                test=lambda: test_collision() or traj_client.result() is not None or
+                (callable(test) and test() == True) or
+                (all(diff() < threshold for diff in diffs)),
+                timeout=timeout,
+                timeout_msg=fail_msg,
+                rate=100,
+                raise_on_error=False
+            )
+            res = traj_client.result()
+            if res is not None and res.error_code:
+                rospy.loginfo("Trajectory Server Message: {}".format(res))
+
+        rospy.sleep(0.5)
+
+        self._ctrl_manager.set_motion_controller(curr_controller)
+
+        rospy.loginfo("{}: Trajectory controlling complete".format(
+            self.__class__.__name__))
+
     def get_flange_pose(self, pos=None, ori=None):
         """
         Get the pose of flange (panda_link8) given the pose of the end-effector frame.
