@@ -456,6 +456,15 @@ class ArmInterface(object):
         """
         return deepcopy(self._joint_velocity)
 
+    def joint_ordered_velocities(self):
+        """
+        Return all joint velocities.
+
+        :rtype: [float]
+        :return: joint velocities (rad/s) ordered by joint_names from proximal to distal (i.e. shoulder to wrist).
+        """
+        return [self._joint_velocity[name] for name in self._joint_names]
+
     def joint_effort(self, joint):
         """
         Return the requested joint effort.
